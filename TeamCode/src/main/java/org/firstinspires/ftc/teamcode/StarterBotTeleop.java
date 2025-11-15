@@ -85,7 +85,7 @@ public class StarterBotTeleop extends OpMode {
     ElapsedTime launcherIdleTimer = new ElapsedTime();
     ElapsedTime servoElapsedTimer = new ElapsedTime();
     ElapsedTime triggerCooldown = new ElapsedTime();
-    double triggerMinTimeBetweenShots = 0.3;
+    double triggerMinTimeBetweenShots = 0.1;
 
     /*
      * TECH TIP: State Machines
