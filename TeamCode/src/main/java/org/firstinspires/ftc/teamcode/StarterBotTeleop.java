@@ -83,6 +83,7 @@ public class StarterBotTeleop extends OpMode {
 
     ElapsedTime feederTimer = new ElapsedTime();
     ElapsedTime launcherIdleTimer = new ElapsedTime();
+    ElapsedTime servoElapsedTimer = new ElapsedTime();
     ElapsedTime triggerCooldown = new ElapsedTime();
     double triggerMinTimeBetweenShots = 0.3;
 
@@ -225,16 +226,16 @@ public class StarterBotTeleop extends OpMode {
         /*
          * Now we call our "Launch" function.
          */
-        boolean bumperPressed = gamepad1.rightBumperWasPressed();
-        boolean triggerPressed = gamepad1.right_trigger > 0.5;
+        boolean rightBumperPressed = gamepad1.rightBumperWasPressed();
+        boolean rightTriggerPressed = gamepad1.right_trigger > 0.5;
 
         boolean firePressed = false;
 
-        if (bumperPressed) {
+        if (rightBumperPressed) {
             firePressed = true;
         }
 
-        if (triggerPressed && triggerCooldown.seconds() > triggerMinTimeBetweenShots){
+        if (rightTriggerPressed && triggerCooldown.seconds() > triggerMinTimeBetweenShots){
             firePressed = true;
             triggerCooldown.reset();
         }
@@ -245,6 +246,26 @@ public class StarterBotTeleop extends OpMode {
 
         if (launcher.getVelocity() > 50 && launcherIdleTimer.seconds() > 5.0) {
             launcher.setVelocity(STOP_SPEED);
+        }
+
+        boolean leftBumperPressed = gamepad1.leftBumperWasPressed();
+        boolean leftTriggerPressed = gamepad1.left_trigger > 0.5;
+
+        boolean servoPressed = false;
+
+        if(leftBumperPressed){
+            servoPressed = true;
+        }
+
+        if(servoPressed) {
+            leftFeeder.setPower(-FULL_SPEED); // change power
+            rightFeeder.setPower(-FULL_SPEED);
+            servoElapsedTimer.reset();
+            if (servoElapsedTimer.seconds() > 0.5) {//set time desired based on testing
+                leftFeeder.setPower(STOP_SPEED);
+                rightFeeder.setPower(STOP_SPEED);
+                servoPressed = false;
+            }
         }
 
         /*
