@@ -82,6 +82,9 @@ public class StarterBotTeleop extends OpMode {
     private CRServo rightFeeder = null;
 
     ElapsedTime feederTimer = new ElapsedTime();
+    ElapsedTime launcherIdleTimer = new ElapsedTime();
+    ElapsedTime triggerCooldown = new ElapsedTime();
+    double triggerMinTimeBetweenShots = 0.1;
 
     /*
      * TECH TIP: State Machines
@@ -214,6 +217,7 @@ public class StarterBotTeleop extends OpMode {
          */
         if (gamepad1.y) {
             launcher.setVelocity(LAUNCHER_TARGET_VELOCITY);
+            launcherIdleTimer.reset();
         } else if (gamepad1.b) { // stop flywheel
             launcher.setVelocity(STOP_SPEED);
         }
@@ -221,7 +225,27 @@ public class StarterBotTeleop extends OpMode {
         /*
          * Now we call our "Launch" function.
          */
-        launch(gamepad1.rightBumperWasPressed());
+        boolean rightBumperPressed = gamepad1.rightBumperWasPressed();
+        boolean rightTriggerPressed = gamepad1.right_trigger > 0.5;
+
+        boolean firePressed = false;
+
+        if (rightBumperPressed) {
+            firePressed = true;
+        }
+
+        if (rightTriggerPressed && triggerCooldown.seconds() > triggerMinTimeBetweenShots){
+            firePressed = true;
+            triggerCooldown.reset();
+        }
+
+        if (firePressed){
+            launch(true);
+        }
+
+        if (launcher.getVelocity() > 50 && launcherIdleTimer.seconds() > 5.0) {
+            launcher.setVelocity(STOP_SPEED);
+        }
 
         /*
          * Show the state and motor powers
@@ -229,6 +253,14 @@ public class StarterBotTeleop extends OpMode {
         telemetry.addData("State", launchState);
         telemetry.addData("Motors", "left (%.2f), right (%.2f)", leftPower, rightPower);
         telemetry.addData("motorSpeed", launcher.getVelocity());
+        telemetry.addData("Launcher",
+                "Vel: %.0f  |  State: %s  |  AutoOff: %s",
+                launcher.getVelocity(),
+                launchState,
+                (launcher.getVelocity() > 50)
+                        ? String.format("%.1fs", Math.max(0, 5.0 - launcherIdleTimer.seconds()))
+                        : "Stopped"
+        );
 
     }
 
@@ -259,6 +291,7 @@ public class StarterBotTeleop extends OpMode {
                 break;
             case SPIN_UP:
                 launcher.setVelocity(LAUNCHER_TARGET_VELOCITY);
+                launcherIdleTimer.reset();
                 if (launcher.getVelocity() > LAUNCHER_MIN_VELOCITY) {
                     launchState = LaunchState.LAUNCH;
                 }
@@ -267,6 +300,7 @@ public class StarterBotTeleop extends OpMode {
                 leftFeeder.setPower(FULL_SPEED);
                 rightFeeder.setPower(FULL_SPEED);
                 feederTimer.reset();
+                launcherIdleTimer.reset();
                 launchState = LaunchState.LAUNCHING;
                 break;
             case LAUNCHING:
