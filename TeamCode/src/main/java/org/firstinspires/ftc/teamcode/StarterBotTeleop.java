@@ -71,8 +71,13 @@ public class StarterBotTeleop extends OpMode {
      * velocity. Here we are setting the target, and minimum velocity that the launcher should run
      * at. The minimum velocity is a threshold for determining when to fire.
      */
-    final double LAUNCHER_TARGET_VELOCITY = 1125;
-    final double LAUNCHER_MIN_VELOCITY = 1075;
+    final double LAUNCHER_TARGET_VEL_REGULAR = 1125;
+    final double LAUNCHER_MIN_VEL_REGULAR = 1075;
+    final double LAUNCHER_TARGET_VEL_POWER = 2200;
+    final double LAUNCHER_MIN_VEL_POWER = 2150;
+
+    double LAUNCHER_TARGET_VELOCITY = LAUNCHER_TARGET_VEL_REGULAR;
+    double LAUNCHER_MIN_VELOCITY = LAUNCHER_MIN_VEL_REGULAR;
 
     // Declare OpMode members.
     private DcMotor leftDrive = null;
@@ -219,23 +224,68 @@ public class StarterBotTeleop extends OpMode {
         }
 
         /*
-         * Now we call our "Launch" function.
+         * Launch FSM
          */
+        if (gamepad1.right_bumper) { // regular shot
+            LAUNCHER_TARGET_VELOCITY = LAUNCHER_TARGET_VEL_REGULAR;
+            LAUNCHER_MIN_VELOCITY = LAUNCHER_MIN_VEL_REGULAR;
 
-        launch(gamepad1.rightBumperWasPressed());
+            launchState = LaunchState.SPIN_UP;
 
-        /*
-         * Show the state and motor powers
-         */
-        telemetry.addData("State", launchState);
-        telemetry.addData("Motors", "left (%.2f), right (%.2f)", leftPower, rightPower);
-        telemetry.addData("motorSpeed", launcher.getVelocity());
+        } else if (gamepad1.right_trigger > 0.5) { // power shot
+            LAUNCHER_TARGET_VELOCITY = LAUNCHER_TARGET_VEL_POWER;
+            LAUNCHER_MIN_VELOCITY = LAUNCHER_MIN_VEL_POWER;
+
+            launchState = LaunchState.SPIN_UP;
+
+        } else {
+            launchState = LaunchState.IDLE;
+        }
+
+
+        switch(launchState){
+        case IDLE:
+            leftFeeder.setPower(STOP_SPEED);
+            rightFeeder.setPower(STOP_SPEED);
+            break;
+
+        case SPIN_UP:
+            launcher.setVelocity(LAUNCHER_TARGET_VELOCITY);
+            if (launcher.getVelocity() > LAUNCHER_MIN_VELOCITY) {
+                launchState = LaunchState.LAUNCH;
+            }
+            break;
+
+        case LAUNCH:
+            leftFeeder.setPower(FULL_SPEED);
+            rightFeeder.setPower(FULL_SPEED);
+            feederTimer.reset();
+            launchState = LaunchState.LAUNCHING;
+            break;
+
+        case LAUNCHING:
+            if (feederTimer.seconds() > FEED_TIME_SECONDS) {
+                launchState = LaunchState.IDLE;
+                leftFeeder.setPower(STOP_SPEED);
+                rightFeeder.setPower(STOP_SPEED);
+            }
+            break;
 
     }
+
+
+    /*
+     * Show the state and motor powers
+     */
+        telemetry.addData("State",launchState);
+        telemetry.addData("Motors","left (%.2f), right (%.2f)",leftPower,rightPower);
+        telemetry.addData("motorSpeed",launcher.getVelocity());
+
 
     /*
      * Code to run ONCE after the driver hits STOP
      */
+}
     @Override
     public void stop() {
     }
@@ -250,33 +300,5 @@ public class StarterBotTeleop extends OpMode {
         leftDrive.setPower(leftPower);
         rightDrive.setPower(rightPower);
     }
-
-    void launch(boolean shotRequested) {
-        switch (launchState) {
-            case IDLE:
-                if (shotRequested) {
-                    launchState = LaunchState.SPIN_UP;
-                }
-                break;
-            case SPIN_UP:
-                launcher.setVelocity(LAUNCHER_TARGET_VELOCITY);
-                if (launcher.getVelocity() > LAUNCHER_MIN_VELOCITY) {
-                    launchState = LaunchState.LAUNCH;
-                }
-                break;
-            case LAUNCH:
-                leftFeeder.setPower(FULL_SPEED);
-                rightFeeder.setPower(FULL_SPEED);
-                feederTimer.reset();
-                launchState = LaunchState.LAUNCHING;
-                break;
-            case LAUNCHING:
-                if (feederTimer.seconds() > FEED_TIME_SECONDS) {
-                    launchState = LaunchState.IDLE;
-                    leftFeeder.setPower(STOP_SPEED);
-                    rightFeeder.setPower(STOP_SPEED);
-                }
-                break;
-        }
-    }
 }
+
